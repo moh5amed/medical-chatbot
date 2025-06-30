@@ -62,9 +62,6 @@ Then open [http://localhost:8501](http://localhost:8501) in your browser.
 
 ## Credits
 - Built with [Streamlit](https://streamlit.io/), [PyTorch](https://pytorch.org/), [scikit-learn](https://scikit-learn.org/), and [SHAP](https://shap.readthedocs.io/)
-- AI model and data generation by [Your Name/Team]
+- AI model and data generation by Mohamed Hossam
 
 ---
-
-## License
-MIT (or your preferred license) 
