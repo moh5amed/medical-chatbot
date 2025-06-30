@@ -17,8 +17,7 @@ A web-based AI tool for predicting diseases from patient symptoms and vital info
 
 ### 1. **Clone the repository**
 ```
-git clone <your-repo-url>
-cd <your-repo-directory>
+git clone moh5amed/medical-chatbot
 ```
 
 ### 2. **Install requirements**
