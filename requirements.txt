@@ -1,6 +1,6 @@
 streamlit
 torch
-scikit-learn
+scikit-learn==1.3.2
 shap
 numpy
 pandas
