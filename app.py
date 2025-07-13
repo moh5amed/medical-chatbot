@@ -18,14 +18,20 @@ def load_resources():
         ohe = pickle.load(f)
     with open('label_encoder_symptom_dataset.pkl', 'rb') as f:
         le = pickle.load(f)
-    with open('rf_model_symptom_dataset.pkl', 'rb') as f:
-        rf = pickle.load(f)
+    try:
+        with open('rf_model_symptom_dataset.pkl', 'rb') as f:
+            rf = pickle.load(f)
+        rf_available = True
+    except Exception as e:
+        st.warning(f"⚠️ Random Forest model could not be loaded: {e}")
+        rf = None
+        rf_available = False
     # Get features
     with open('symptom_dataset.csv', 'r', encoding='utf-8') as f:
         header = f.readline().strip().split(',')
     all_features = header[1:]
     symptom_names = [c for c in all_features if c not in VITAL_NUMERIC + VITAL_CATEGORICAL + VITAL_BINARY]
-    return scaler, ohe, le, rf, all_features, symptom_names
+    return scaler, ohe, le, rf, rf_available, all_features, symptom_names
 
 # Model definition
 class MLP(nn.Module):
@@ -59,7 +65,7 @@ CHRONIC_DISEASES = ['diabetes', 'hypertension', 'asthma', 'none']
 ALLERGIES = ['penicillin', 'nuts', 'pollen', 'none']
 MEDICATIONS = ['metformin', 'lisinopril', 'albuterol', 'none']
 
-scaler, ohe, le, rf, all_features, symptom_names = load_resources()
+scaler, ohe, le, rf, rf_available, all_features, symptom_names = load_resources()
 
 # User input form
 with st.form("patient_form"):
@@ -106,17 +112,33 @@ if submitted:
     with torch.no_grad():
         logits = model(torch.tensor(X_input, dtype=torch.float32).to(device))
         mlp_probs = torch.softmax(logits, dim=1).cpu().numpy()[0]
-    rf_probs = rf.predict_proba(X_input)[0]
-    ensemble_probs = (mlp_probs + rf_probs) / 2
+    
+    # Try Random Forest prediction with error handling
+    if rf_available:
+        try:
+            rf_probs = rf.predict_proba(X_input)[0]
+            ensemble_probs = (mlp_probs + rf_probs) / 2
+            prediction_method = "Ensemble (MLP + Random Forest)"
+        except Exception as e:
+            st.warning(f"⚠️ Random Forest prediction failed: {e}")
+            ensemble_probs = mlp_probs
+            prediction_method = "MLP only (Random Forest failed)"
+    else:
+        ensemble_probs = mlp_probs
+        prediction_method = "MLP only (Random Forest not available)"
+    
     pred_idx = np.argmax(ensemble_probs)
     pred_disease = le.inverse_transform([pred_idx])[0]
     st.success(f"Predicted Disease: {pred_disease}")
+    st.info(f"Method: {prediction_method}")
+    
     # Top 3
-    st.subheader("Top 3 predictions (ensemble):")
+    st.subheader("Top 3 predictions:")
     top3 = np.argsort(ensemble_probs)[::-1][:3]
     for idx in top3:
         disease = le.inverse_transform([idx])[0]
         st.write(f"{disease}: {ensemble_probs[idx]:.2f}")
+    
     # SHAP explainability
     st.subheader("Top features contributing to MLP prediction:")
     mlp_pred_idx = np.argmax(mlp_probs)
